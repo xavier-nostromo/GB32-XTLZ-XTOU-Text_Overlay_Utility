@@ -28,3 +28,5 @@ An advanced, hardware-accelerated style on-screen display (OSD) text overlay uti
 
 ---
 
+* Install GFA-BASIC 32 to run & compile this app for your own use.
+* Be sure to include the Lib_SetObjectTranKey.lg32 file in this app's dir so it can provide the functions for object transparency.
