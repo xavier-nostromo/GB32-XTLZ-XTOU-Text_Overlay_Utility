@@ -3,6 +3,8 @@
 An advanced, hardware-accelerated style on-screen display (OSD) text overlay utility built for **GFA-BASIC 32 (GB32)**. It features strict window transparency masking, dynamic sizing, and selection-based text alignment control powered by native Win32 API hooking and GB32's built-in context menus.
 
 ---
+<img width="1277" height="1034" alt="xtou" src="https://github.com/user-attachments/assets/1e7037a1-02a3-4afd-9e3e-5013c66ce1c5" />
+
 
 ## 🚀 Features
 
