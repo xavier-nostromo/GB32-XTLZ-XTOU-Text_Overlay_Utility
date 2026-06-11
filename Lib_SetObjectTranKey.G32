@@ -1,0 +1,99 @@
+'###############################################################################
+'
+' DISCLAIMER:   THIS CODE IS OFFERED AS IS FOR EDUCATIONAL PURPOSES.
+'               YOU ARE FREE TO USE, COPY AND DISTRIBUTE.
+'               THE USE OF THIS CODE IS AT YOUR OWN RISK.
+'               I ACCEPT NO LIABILITY NOR MAKE ANY CLAIM OF
+'               CORRECTNESS OR SUITABILITY IN PART OR IN WHOLE.
+'
+'##E#
+'###############################################################################
+'
+' FILENAME      Lib_SetObjectTranKey.G32
+'
+' DESCRIPTION   A library containing a function to set a form's transparency or
+'               opacity and key color.
+'
+' AUTHOR        (X)
+' EMAIL         xman.gb32@gmail.com
+' YOUTUBE       https://www.youtube.com/@gfabasic32
+' WEBSITE       https://gfabasic32.blogspot.com/
+' FORUM         https://gb32.proboards.com/
+' START         2023-01-16
+' UPDATE        2024-06-21
+' UPDATE        2024-07-01  Discovered can set object tran also i.e.: cmd1
+'
+'###############################################################################
+
+$Export "Lib_SetFormTranKey"
+$Export Proc L_SetObjectTranKey "(o As Object, Optional Transparency As Long = -1, Optional KeyColor As Long = -1)"
+
+Declare Function SetLayeredWindowAttributes Lib "user32.dll" ( _
+  ByVal hwnd As Long, _
+  ByVal crKey As Long, _
+  ByVal bAlpha As Byte, _
+  ByVal dwFlags As Long) As Long
+
+Proc L_SetObjectTranKey(o As Object, Optional Transparency As Long = -1, Optional KeyColor As Long = -1)
+  Local Const GWL_EXSTYLE       = -20
+  Local Const WS_EX_LAYERED     = &H80000
+  Local Const LWA_ALPHA         = &H2
+  Local Const LWA_COLORKEY      = &H1
+
+  '
+  ' Set the transparency of specified object using SetLayeredWindowAttributes() function...
+  '
+  If !IsNothing(o)
+    Local hwnd As Long = o.hWnd
+    Local Attrib As Long = GetWindowLong(hwnd, GWL_EXSTYLE)
+    ~SetWindowLong(hwnd, GWL_EXSTYLE, Attrib Or WS_EX_LAYERED)
+
+    If Transparency <> -1 And KeyColor <> -1
+      ~SetLayeredWindowAttributes(hwnd, KeyColor, CByte(Transparency And $FF), LWA_ALPHA Or LWA_COLORKEY)
+    ElseIf Transparency <> -1 And KeyColor = -1
+      ~SetLayeredWindowAttributes(hwnd, KeyColor, CByte(Transparency And $FF), LWA_ALPHA)
+    ElseIf Transparency = -1 And KeyColor <> -1
+      ~SetLayeredWindowAttributes(hwnd, KeyColor, CByte(Transparency And $FF), LWA_COLORKEY)
+    ElseIf Transparency = -1 And KeyColor = -1
+      ~SetLayeredWindowAttributes(hwnd, 0, 0, 0)
+    EndIf
+
+  EndIf
+EndProc
+$DatFile
+$FormVersion = 2
+:{Icon} 1419,41395
+QN0axMYBzGqfFMfBGAAMx8x9vFYETI1EisPJPCvHy/eGRIYeRchQBGxESEypHHzUfGviW4jwvDHN
+REL7+/99UwGJyYC4bU00JRQEWDRABGoQAqJIIQTIIkS7IEGCCChwXr9MFw9SIA5ChgLXjXtEDJhA
+wKFCrrYgjWZKEAFjhw2241C2tECoNOgAYz2W7ZNgqlQAeAECBhCHvWM9GCoNc40b7YNwAQECoPud
+6dbbz6AMERP92wg1A2lCBvwvQAehR4j0LDoghQIcp1qSxfIBCIvd8ECBzIIDc77qpxuYpvBK8gBA
+8QIkQOjojxQAdBaK4jZLhQQgcrQG7hgEU+r08Ng0uZgahQBJ1q0IShh4FuDrRXQEi7K4EjBcUVjg
+MRGIF+gVzASoDyiawPg5BeIXxOWDHg7XsN6AIuDQgvNAMQHdxVhYaQIqGEiqjlY5IWk0UEECnhRw
+Gwsd3rwbsC9EEUCTPifQhmDobvABUDyX472OPScp/EwsjGflNwQAzQa0iKMNjHqRUSchd25ugNkh
+I+cDAYhwcITCZZSmJuSiLcCVCUCbea8vN3QiwmeQJAFA6HcLDyCnpCAxFm4FAG55i8IfNEykQhAg
+JMNGmGHLxyRMZoN5HsDrCsIj5XBapAt0YJWOipWrBzoCURRJOQJkGOBA9fgKagmAjWDTh6YI/AIh
+lRwEcHARAGjIuaFtOxHlUeRMk0EiIfLFQMMBHlBVgGEQFwCoA/3KNDvvvB6kZHq1aA7xesP0+3R9
+Sv3Dt/5SKlSflzSs8ELLDpS7HKUGGGG+KnlY5xSJMELeiohqyxxxxX5sELPflYxTsAXiF8NWu1HF
+dLWHOhmxCaGfAWtfkAhwJPhQ7HhwqEatcWiln2/tVNelgjY7yaIEEGwTkdQEScgnwtr2/OI3nJ0S
+K0FcgQQILxiFgj7tYxSsYLW0HxBotmdbxit4CmIaHTUhz4CO5C4gGgnT3oE2i6YkYAJcBEiUwNLP
+6QVEXAgRx52m01Ss8ELWiFbxZBxyjPuYQEqPppJr5IEgXYE+I9yAKYIECXatqUM2gUty0TIEMjgM
+wtvrmG7il+GowDGAwDhQC5MiOGDB0FopgPmtECBBytCZsHCSQ5vSDYMg0uZgahQBP0q0IShh4FuD
+rxY0BndFcixwGIOyvgdgL0cGiheIPUCCDUos+pE1xazwccA0C2gUWxvI8aqNyCwxF9glANS4Iqic
+BswfBRUh+CSCCYpgAWOWiljYZq5A+9rhFEQtKicwacJjMQWBBapGflDBabodDLQaoNeioISFZwNe
+w0IQ3M+/bGLm5AfJTCZZi74PUijaePsOD0SN+3m1ggOatARQK4cQ+ysrhZXDjlY5IWmaCmBmodvE
++VJKMNGmGHLxyRM1W8DqkwHd1pCBN0aspifQUN6cCPAc6wSYBo+brdo1J+okyLihkoUPJMECzoBi
+GWHBFDvh2Pm/Vq16cLDWL1at3y7OKvvv9WG8FLErxydNi2eK0Jzu3yoYsQsGL31YZvGLMrRUmrtW
+GTjFi1Y5uGL714Oibpl3ZXq16cLDWDh2/ev079+X5sELPYQZoHa/3QUNQVLN0vZK4KgYhhwKCI7Y
+GQEa/7flatiwtMKWq1avlvBXl333eLjaxC+GxVIdhOZ29WGqEL4bscrPWw7asg51IYDzxtW2MuCu
+xb0qlNHhk7Sa5bgUpWrIcLjihQ7Hv9d079tyZJWeCh2/tWNel0Q/HTh1gwQYABmShw8Wo9fToUr1
+eLjzl333eLDLiF9R0TShOZ29WGGEL6jFi1Y5uGVvD5aZTIE1bJtspo97nWGkGCtfEGshH4qIs70N
+BslAkbYNA6gghDhpQ7/rUr1eLHUpymUOoRsYLW0HLErRoxjoitYxmPIK+piO4IWkNECA
+$ExeName = Lib_SetObjectTranKey.lg32
+$FileDescription = Lib_Transparency
+$Comments = Author: JM Melanson
+$LegalCopyright = © 2023 JM Melanson
+$LanguageId = 0409
+$FileFlags# = 2
+$FileVersion = %d.%d.%d.%d
+$ProductVersion = %d.%d.%d.%d
+$DatFile
