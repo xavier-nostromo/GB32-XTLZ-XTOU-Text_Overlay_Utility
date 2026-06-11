@@ -1,0 +1,418 @@
+' ==============================================================================
+'##E#
+' Title:       XTOOL Type Overlay Util (RichEdit Native PopUp Version)
+' Author:      Xavier
+' Assistance:  Co-authored with AI
+' Date:        June 11, 2026
+' Description: On-screen display text overlay utility featuring selection-based
+'              alignment control using the native GB32 PopUp function.
+'              Select text then Ctrl+L|E|R for {left, center, right} alignment.
+' ==============================================================================
+
+$Library "UpdateRT"
+UpdateRuntime      ' Patches GfaWin23.Ocx
+$Library "Lib_SetObjectTranKey"
+
+P_Inits
+
+$Group "INITS"
+Proc P_Inits
+  Global Long BoxOldProc
+  Global Long hMsgHook
+  Global Long Win1OldProc
+  Global Bool AppRunning
+
+  ' Win32 API Constants
+  Const GWL_HWNDPARENT = -8
+  Const GWL_WNDPROC    = -4
+  Const SWP_NOSIZE     = &H0001
+  Const SWP_NOMOVE     = &H0002
+  Const SWP_NOACTIVATE = &H0010
+  Const HWND_TOPMOST   = -1
+
+  ' Win32 Window Message Constants
+  Const WM_SETFOCUS      = &H0007
+  Const WM_KILLFOCUS     = &H0008
+  Const WM_NCACTIVATE    = &H0086
+  Const WM_MOUSEACTIVATE = &H0021
+  Const MA_NOACTIVATE    = 3
+
+  ' --- INITIALIZATION ---
+  FullW 2
+  With Win_2
+    .BorderStyle = 0
+    .OnTop = True
+    .AutoRedraw = 1
+    .BackColor = RGB(0, 0, 0)
+  EndWith
+
+  FullW 1
+  With Win_1
+    .BorderStyle = 0
+    .OnTop = True
+    .AutoRedraw = 1
+    .BackColor = RGB(1, 1, 1)
+  EndWith
+
+  ~SetWindowLong(Win_1.hWnd, GWL_HWNDPARENT, Win_2.hWnd)
+
+  ForeColor = RGB(255, 255, 0)
+
+  ' Create Ocx RichEdit control with empty string to prevent default formatting drops
+  Ocx RichEdit ed1 = "", 0, 0, Win_1.ScaleWidth, Win_1.ScaleHeight
+  Dim m = 20, w = Win_1.ScaleWidth, h = Win_1.ScaleHeight
+
+  With ed1
+    .BackColor = RGB(1, 1, 1)
+    .ForeColor = RGB(255, 255, 0)
+    .BorderStyle = 0
+    .FontSize = 96
+    .FontName = "Cyberverse"
+    .MultiLine = True
+    .Left = m
+    .Top = m
+    .Width = w - 2 * m
+    .Height = h - 2 * m
+    .SelAlignment = 0             ' Set default alignment to Left (0=Left, 1=Right, 2=Center)
+    .SelColor = RGB(255, 255, 0)  ' Force formatting selection color
+    .SelText = "Ready>" #13 #10   ' Append initial text via rich selection channel
+  EndWith
+  ed1.SetFocus
+  ed1.SelStart = Len(ed1.Text)
+
+  ' Initialize Transparency Layers
+  L_SetObjectTranKey Win_2, 128, -1
+  L_SetObjectTranKey Win_1, 255, RGB(1, 1, 1)
+
+  ~SetWindowPos(Win_1.hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE Or SWP_NOSIZE Or SWP_NOACTIVATE)
+  ~SetWindowPos(Win_2.hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE Or SWP_NOSIZE Or SWP_NOACTIVATE)
+
+  BoxOldProc = SetWindowLong(ed1.hWnd, GWL_WNDPROC, ProcAddr(TextBox_FocusProc))
+  Win1OldProc = SetWindowLong(Win_1.hWnd, GWL_WNDPROC, ProcAddr(Win1_WndProc))
+
+  Declare Function GetCurrentThreadId Lib "kernel32" () As Long
+  Const WH_GETMESSAGE = 3
+  hMsgHook = SetWindowsHookEx(WH_GETMESSAGE, ProcAddr(Global_MessageHook), 0, GetCurrentThreadId())
+
+  Const VK_CANCEL = &H03
+  AppRunning = True
+
+  ' --- MAIN APP LOOP ---
+  Do
+    Sleep
+    If (GetAsyncKeyState(VK_CANCEL) And &H8000) <> 0
+      AppRunning = False
+    EndIf
+  Loop While AppRunning And Not (Win_1 Is Nothing)
+
+  ' --- CLEANUP BEFORE EXIT ---
+  If hMsgHook <> 0
+    ~UnhookWindowsHookEx(hMsgHook)
+    hMsgHook = 0
+  EndIf
+  If BoxOldProc <> 0
+    ~SetWindowLong(ed1.hWnd, GWL_WNDPROC, BoxOldProc)
+    BoxOldProc = 0
+  EndIf
+  If Win1OldProc <> 0
+    ~SetWindowLong(Win_1.hWnd, GWL_WNDPROC, Win1OldProc)
+    Win1OldProc = 0
+  EndIf
+
+  ' Safely close windows after un-subclassing completes
+  If !IsNothing(Win_1) Win_1.Close
+  If !IsNothing(Win_2) Win_2.Close
+EndProc
+
+$Group "FUNCS"
+Function Win1_WndProc(hWnd%, Mess%, wParam%, lParam%) As Long
+  Select Case Mess
+  Case WM_MOUSEACTIVATE
+    Return MA_NOACTIVATE
+
+  Case WM_NCACTIVATE
+    Return CallWindowProc(Win1OldProc, hWnd, Mess, 1, lParam)
+
+  EndSelect
+  Return CallWindowProc(Win1OldProc, hWnd, Mess, wParam, lParam)
+EndFunction
+
+Function TextBox_FocusProc(hWnd%, Mess%, wParam%, lParam%) As Long
+  Const WM_CHAR  = &H0102
+  Const WM_PASTE = &H0302
+  Select Case Mess
+  Case WM_SETFOCUS
+    ed1.SelColor = RGB(255, 255, 0)
+    L_SetObjectTranKey Win_1, 255, RGB(1, 1, 1)
+    ~SetWindowPos(Win_2.hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE Or SWP_NOSIZE Or SWP_NOACTIVATE)
+    ~SetWindowPos(Win_1.hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE Or SWP_NOSIZE)
+
+  Case WM_KILLFOCUS
+    ed1.SelColor = RGB(255, 255, 0)
+    L_SetObjectTranKey Win_1, 255, RGB(1, 1, 1)
+    ~SetWindowPos(Win_2.hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE Or SWP_NOSIZE Or SWP_NOACTIVATE)
+    ~SetWindowPos(Win_1.hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE Or SWP_NOSIZE Or SWP_NOACTIVATE)
+
+  Case WM_CHAR, WM_PASTE
+    ed1.SelColor = RGB(255, 255, 0)
+  EndSelect
+  Return CallWindowProc(BoxOldProc, hWnd, Mess, wParam, lParam)
+EndFunction
+
+Function Global_MessageHook(ByVal nCode%, ByVal wParam%, ByVal lParam%) As Long
+  Const HC_ACTION = 0
+  Const WM_MOUSEWHEEL = &H20A
+  Const WM_SYSCOMMAND = &H112
+  Const SC_CLOSE      = &HF060
+  Local Long msgType, wpValue
+  Local Short delta
+  Local Long oldStart, oldLen, newSize
+
+  If nCode = HC_ACTION
+    msgType = Long{lParam + 4}
+    wpValue = Long{lParam + 8}
+
+    Select Case msgType
+    Case WM_MOUSEWHEEL
+      delta = HiWord(wpValue)
+      newSize = ed1.FontSize
+      If delta > 0
+        If newSize < 200
+          newSize = newSize + 4
+        EndIf
+      Else
+        If newSize > 8
+          newSize = newSize - 4
+        EndIf
+      EndIf
+
+      If newSize <> ed1.FontSize
+        ' Save current text selection state
+        oldStart = ed1.SelStart
+        oldLen = ed1.SelLength
+
+        ' Select the entire control text to cleanly alter the wrapper attributes
+        ed1.SelStart = 0
+        ed1.SelLength = ed1.TextLength
+        ed1.FontSize = newSize
+        ed1.SelColor = RGB(255, 255, 0)
+
+        ' Restore original selection block/caret position
+        ed1.SelStart = oldStart
+        ed1.SelLength = oldLen
+        ed1.SelColor = RGB(255, 255, 0)
+      EndIf
+
+    Case WM_SYSCOMMAND
+      If (wpValue And &HFFF0) = SC_CLOSE
+        AppRunning = False
+        Long{lParam + 4} = 0  ' Mutate message to WM_NULL to defer close for safe loop breakdown
+      EndIf
+    EndSelect
+  EndIf
+  Return CallNextHookEx(hMsgHook, nCode, wParam, lParam)
+EndFunction
+
+$Group "EVENTS"
+Sub ed1_MouseUp(Button&, Shift&, X!, Y!)
+  Const RIGHT_CLICK = 2
+  Local Int32 choice
+  Local String menuItems$
+
+  If Button = RIGHT_CLICK
+    ' Construct the string mapping items separated by the pipe character
+    ' Using Chr(9) to right-justify the hotkey layout display text
+    menuItems$ = "Align &Left" + Chr(9) + "Ctrl+L|Align &Center" + Chr(9) + "Ctrl+E|Align &Right" + Chr(9) + "Ctrl+R"
+
+    ' Execute the native PopUp function at the current mouse position (i = -1)
+    choice = PopUp(menuItems$, 0, 0, -1)
+
+    ' Act based on the 0-based index position returned
+    Select Case choice
+    Case 0 ' Align Left
+      ed1.SelAlignment = 0
+      ed1.SelColor = RGB(255, 255, 0)
+    Case 1 ' Align Center
+      ed1.SelAlignment = 2
+      ed1.SelColor = RGB(255, 255, 0)
+    Case 2 ' Align Right
+      ed1.SelAlignment = 1
+      ed1.SelColor = RGB(255, 255, 0)
+    EndSelect
+  EndIf
+EndSub
+
+Sub ed1_KeyPress(Ascii&)
+  Const VK_ESCAPE = &H1B
+  If Ascii = VK_ESCAPE
+    AppRunning = False  ' Stop loop execution safely without triggering window thread drops
+  EndIf
+EndSub
+
+Sub Win_1_MessageProc(hWnd%, Mess%, wParam%, lParam%, Retval%, ValidRet?)
+EndSub
+$DatFile
+$FormVersion = 2
+:{frm1 65
+EAAAAAAAAAAAAAAAWWEAAEWRvAQFmJXbxAgElCAAE00UgMFalxGbgQEbnBAAAAACAAAgPAAAACAA
+AEAAHAAgAAA=
+:{Icon} 8851,15086
+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
+gA8MmM93wgA7YainJEzE+B==
+$ExeName = XTOU.Exe
+$LanguageId = 0409
+$DatFile
